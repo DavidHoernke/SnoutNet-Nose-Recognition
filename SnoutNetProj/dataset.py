@@ -1,8 +1,12 @@
 import os
 import pandas as pd
-from PIL import Image, ImageDraw
-from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
+import torch
+from PIL import Image, ImageDraw
+from torchvision import transforms
+from torch.utils.data import Dataset
+from torchvision.io import read_image
+
 
 class CustomImageDataset(Dataset):
     def __init__(self, annotations_dir, img_dir, transform=None, target_transform=None):
@@ -26,10 +30,18 @@ class CustomImageDataset(Dataset):
 
 
     def show_image_with_circle(self, idx, radius=10, color="red"):
+        # Get the image and coordinates
         img, coordinates = self.__getitem__(idx)
-        draw = ImageDraw.Draw(img)
+
+        # If the image is a tensor, convert it back to a PIL Image
+        if isinstance(img, torch.Tensor):
+            img = transforms.ToPILImage()(img)
 
         # Draw the red circle around the coordinates
+        draw = ImageDraw.Draw(img)
+
+        coordinates = eval(coordinates)
+
         x, y = coordinates
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), outline=color, width=2)
 
