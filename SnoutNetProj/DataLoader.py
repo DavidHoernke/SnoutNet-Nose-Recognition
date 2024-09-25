@@ -16,3 +16,13 @@ class CustomImageDataset(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         img = read_image(img_path)
+        label = self.img_labels.iloc[idx, 1]
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.target_transform is not None:
+            label = self.target_transform(label)
+        return img, label
+
+dataset = CustomImageDataset
+
+dataset.__getitem__(5)
