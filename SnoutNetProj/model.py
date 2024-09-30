@@ -42,10 +42,10 @@ class SnoutNet(nn.Module):
         return x
 
 
-# Instantiate the model, define the loss function and optimizer
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = SnoutNet().to(device)
-criterion = nn.CrossEntropyLoss()  # Use cross-entropy loss for multi-class classification
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-print(summary(model, (3, 227, 227)))
+# # Instantiate the model, define the loss function and optimizer
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model = SnoutNet().to(device)
+# criterion = nn.CrossEntropyLoss()  # Use cross-entropy loss for multi-class classification
+# optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+#
+# print(summary(model, (3, 227, 227)))

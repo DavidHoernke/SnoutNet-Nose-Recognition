@@ -1,4 +1,7 @@
+import datetime
+
 import torch
+from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from torchsummary import summary
@@ -13,49 +16,86 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
-def train(n_epochs, optimizer, model, loss_fn, train_loader, scheduler, device, save_file=None, plot_file=None):
-    print('training ...')
+def train(model, optimizer, criterion, train_loader, val_loader, scheduler, device, save_file=None, plot_file=None):
+    print('Training on device: {}', device)
+    model.to(device)
     model.train()
-
-
+    train_losses = []
+    val_losses = []
     for epoch in range(num_epochs):
-        model.train()
-
+        model.train()  # Set the model to training mode
+        running_loss = 0.0
+        correct_predictions = 0
+        print("Epoch {}/{} Starting".format(epoch + 1, num_epochs))
+        # Iterate through batches of data
         for images, labels in train_loader:
-            images, labels = images.to(device), labels.to(device)
+            images, labels = images.to(device), labels.to(device)  # Move data to the device
 
-            optimizer.zero_grad()
+            optimizer.zero_grad()  # Clear previous gradients
+
+            # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
+
+            # Backward pass and optimization
             loss.backward()
             optimizer.step()
 
-        # Optionally validate the model and adjust learning rate based on validation loss
-        val_loss = validate(model, val_loader, criterion, device)
+            # Track statistics
+            running_loss += loss.item()
 
-        # Step the scheduler based on the validation loss (for ReduceLROnPlateau)
+
+        # Calculate the average training loss for the epoch
+        epoch_loss = running_loss / len(train_loader)
+        train_losses.append(epoch_loss)  # Track training loss
+
+        # Validate the model on the validation set
+        val_loss = validate_model(model, val_loader, criterion, device)
+        val_losses.append(val_loss)  # Track validation loss
+        # Adjust the learning rate based on validation loss
         scheduler.step(val_loss)
 
-        print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}')
-
-        scheduler.step(loss_train) # work in progress here
-        losses_train += [loss_train/len(train_loader)]
-
-        print('{} Epoch {}, Training loss {}'.format(
-            datetime.datetime.now(), epoch, loss_train/len(train_loader)))
+        print('\t\tusing device ', device)
+        print('{} Epoch {}, Training loss {}, Validation Loss: {}'.format(
+            datetime.datetime.now(), epoch, epoch_loss, val_loss))
 
         if save_file != None:
             torch.save(model.state_dict(), save_file)
 
-        if plot_file != None:
-            plt.figure(2, figsize=(12, 7))
-            plt.clf()
-            plt.plot(losses_train, label='train')
-            plt.xlabel('epoch')
-            plt.ylabel('loss')
-            plt.legend(loc=1)
-            print('saving ', plot_file)
+        # Plotting after all epochs
+        if plot_file is not None:
+            plt.figure(figsize=(12, 7))
+            plt.plot(train_losses, label='Training Loss')
+            plt.plot(val_losses, label='Validation Loss')
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            plt.title('Training and Validation Loss Over Time')
+            plt.legend(loc='upper right')
+            plt.grid(True)
+            print(f'Saving loss plot to {plot_file}')
             plt.savefig(plot_file)
+
+    print("Training complete!")
+
+def validate_model(model, val_loader, criterion, device):
+    model.eval()  # Set the model to evaluation mode
+    val_loss = 0.0
+
+    with torch.no_grad():  # Disable gradient calculation for validation
+        for images, labels in val_loader:
+            images, labels = images.to(device), labels.to(device)
+
+            # Forward pass
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            # Accumulate validation loss
+            val_loss += loss.item()
+
+    # Calculate the average validation loss
+    val_loss /= len(val_loader)
+    print(f'Validation Loss: {val_loss:.4f}')
+    return val_loss
 
 if __name__ == "__main__":
     # Paths to annotations CSV and image folder
@@ -70,12 +110,16 @@ if __name__ == "__main__":
     model = SnoutNet()
     model.to(device)
     model.apply(init_weights)
-    summary(model, model.input_shape)
+    summary(model, (3, 227, 227))
     # Define any transformations (optional)
 
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert the PIL image to a tensor
-        # transforms.Normalize((0.5,), (0.5,))  # Normalization (if required)
+        transforms.Normalize((0.5,), (0.5,))  # Normalization (if required)
+    ])
+
+    target_transform = transforms.Compose([
+        transforms
     ])
 
     # Instantiate the CustomImageDataset
@@ -85,26 +129,22 @@ if __name__ == "__main__":
     dataset_size = len(dataset)
 
     # Define split sizes (e.g., 80% train, 20% validation)
-    train_size = int(0.9 * dataset_size)
+    train_size = int(0.95 * dataset_size)
     val_size = dataset_size - train_size
 
     # Randomly split the dataset
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
     # Create DataLoaders for train and validation sets
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=6)
+    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=2)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.08, patience=4)
     # Set number of epochs
-    num_epochs = 10
+    num_epochs = 30
 
     # Assuming `train_loader` and `val_loader` are your DataLoaders
-    train(model, train_loader, val_loader, criterion, optimizer, num_epochs, device)
+    train(model,optimizer,criterion,train_loader,val_loader, scheduler, device, save_file='model.pt', plot_file='plot.png')
     # Iterate through the DataLoader (in your training or testing loop)
-    for batch_idx, (images, labels) in enumerate(data_loader):
-        # Now you have a batch of images and corresponding labels
-        print(images.shape)  # e.g., torch.Size([32, 3, 227, 227]) for batch of 32 RGB images
-        print(labels)

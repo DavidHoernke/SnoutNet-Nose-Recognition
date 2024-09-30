@@ -29,10 +29,10 @@ def rescale_image_and_coords(image, coordinates):
 
     # Scale the coordinates
     x, y = coordinates
-    x_scaled = int(x * width_scale)
-    y_scaled = int(y * height_scale)
+    x_normalized = x / original_width
+    y_normalized = y / original_height
 
-    return image_resized, torch.tensor((x_scaled, y_scaled), dtype=torch.int)
+    return image_resized, torch.tensor((x_normalized, y_normalized), dtype=torch.float)
 
 
 class CustomImageDataset(Dataset):
