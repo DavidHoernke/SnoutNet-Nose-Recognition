@@ -11,12 +11,7 @@ import matplotlib.pyplot as plt
 from PIL import ImageDraw, Image
 
 
-# Helper function to rescale the coordinates back to the original image size
-def rescale_coordinates(normalized_coords, original_size):
-    width, height = original_size
-    return int(normalized_coords[0] * width), int(normalized_coords[1] * height)
-
-
+# Helper function to calculate Euclidean distance directly in pixel space
 def euclidean_distance(prediction, ground_truth):
     """Calculate the Euclidean distance between predicted and ground truth coordinates."""
     return math.sqrt((prediction[0] - ground_truth[0]) ** 2 + (prediction[1] - ground_truth[1]) ** 2)
@@ -33,11 +28,12 @@ def evaluate_model(model, test_loader, device):
             # Forward pass to get predictions
             outputs = model(images)
 
-            # Calculate Euclidean distances for each prediction in the batch
             for i in range(len(labels)):
-                pred = outputs[i].cpu().numpy()  # Convert prediction to numpy array
-                label = labels[i].cpu().numpy()  # Convert ground truth to numpy array
-                dist = euclidean_distance(pred, label)  # Calculate the Euclidean distance
+                pred = outputs[i].cpu().numpy()  # Get predicted coordinates in pixel space
+                label = labels[i].cpu().numpy()  # Get ground truth coordinates in pixel space
+
+                # Calculate Euclidean distance in pixel space
+                dist = euclidean_distance(pred, label)
                 distances.append(dist)
 
     # Convert distances list to numpy array for easier statistical calculations
@@ -96,19 +92,19 @@ def visualize_predictions(model, test_dataset, device, num_samples=10, seeRummy=
     fig, axes = plt.subplots(2, 5, figsize=(15, 6))  # 2 rows, 5 images per row
 
     for ax, idx in zip(axes.flatten(), indices):
-        # Get the image and label (normalized coordinates)
+        # Get the image and label (coordinates in pixel space)
         img, label = test_dataset[idx]
-
-        original_size = img.size  # Get the original image size
 
         img = img.to(device).unsqueeze(0)  # Add batch dimension and move to device
 
         with torch.no_grad():
-            pred = model(img).cpu().numpy()[0]  # Get the predicted coordinates (normalized)
+            pred = model(img).cpu().numpy()[0]  # Get the predicted coordinates in pixel space
 
-        # Rescale predicted and ground truth coordinates back to original size
-        pred_x, pred_y = rescale_coordinates(pred, original_size)
-        gt_x, gt_y = rescale_coordinates(label.cpu().numpy(), original_size)
+        # Ground truth coordinates in pixel space
+        gt_x, gt_y = label.cpu().numpy()
+
+        # Predicted coordinates in pixel space
+        pred_x, pred_y = pred
 
         # Convert the image to PIL for drawing
         pil_img = transforms.ToPILImage()(img.squeeze().cpu())  # Convert back to PIL

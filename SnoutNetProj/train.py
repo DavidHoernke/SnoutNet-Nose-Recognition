@@ -15,6 +15,10 @@ def init_weights(m):
     if type(m) == nn.Linear:
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
+    elif type(m) == nn.Conv2d:
+        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 
 def train(model, optimizer, criterion, train_loader, val_loader, scheduler, device, save_file=None, plot_file=None):
     print('Training on device: {}', device)
@@ -115,11 +119,6 @@ if __name__ == "__main__":
 
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert the PIL image to a tensor
-        transforms.Normalize((0.5,), (0.5,))  # Normalization (if required)
-    ])
-
-    target_transform = transforms.Compose([
-        transforms
     ])
 
     # Instantiate the CustomImageDataset
