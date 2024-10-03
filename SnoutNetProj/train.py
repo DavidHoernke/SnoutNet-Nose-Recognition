@@ -26,11 +26,17 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
     model.train()
     train_losses = []
     val_losses = []
+    badValLossCount = 0
+    best_val_loss = float('inf')  # Initialize this outside the loop
+
+    patience = 6  # Number of epochs to wait before stopping early
+
     for epoch in range(num_epochs):
         model.train()  # Set the model to training mode
         running_loss = 0.0
         correct_predictions = 0
-        print("Epoch {}/{} Starting".format(epoch + 1, num_epochs))
+        print(f"Epoch {epoch + 1}/{num_epochs} Starting")
+
         # Iterate through batches of data
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)  # Move data to the device
@@ -43,11 +49,11 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
 
             # Backward pass and optimization
             loss.backward()
+
             optimizer.step()
 
             # Track statistics
             running_loss += loss.item()
-
 
         # Calculate the average training loss for the epoch
         epoch_loss = running_loss / len(train_loader)
@@ -56,19 +62,25 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
         # Validate the model on the validation set
         val_loss = validate_model(model, val_loader, criterion, device)
         val_losses.append(val_loss)  # Track validation loss
+
         # Adjust the learning rate based on validation loss
         scheduler.step(val_loss)
 
-        print('\t\tusing device ', device)
-        print('{} Epoch {}, Training loss {}, Validation Loss: {}'.format(
-            datetime.datetime.now(), epoch, epoch_loss, val_loss))
+        print(f'{datetime.datetime.now()} Epoch {epoch}, Training Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}')
 
-        if save_file != None:
-            torch.save(model.state_dict(), save_file)
+        # Save the best model and stop early if validation hasn't improved in `patience` steps
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            badValLossCount = 0  # Reset the bad validation loss counter
+            if save_file:
+                torch.save(model.state_dict(), save_file)
+                print(f'Saving best model with validation loss: {val_loss:.4f}')
+        else:
+            badValLossCount += 1  # Increment if validation loss didn't improve
 
         # Plotting after all epochs
         if plot_file is not None:
-            plt.figure(figsize=(12, 7))
+            plt.figure(figsize=(12, 25))
             plt.plot(train_losses, label='Training Loss')
             plt.plot(val_losses, label='Validation Loss')
             plt.xlabel('Epochs')
@@ -78,6 +90,10 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
             plt.grid(True)
             print(f'Saving loss plot to {plot_file}')
             plt.savefig(plot_file)
+
+        if badValLossCount >= patience:
+            print(f"Early stopping triggered after {patience} epochs without improvement.")
+            break
 
     print("Training complete!")
 
@@ -128,7 +144,7 @@ if __name__ == "__main__":
     dataset_size = len(dataset)
 
     # Define split sizes (e.g., 80% train, 20% validation)
-    train_size = int(0.95 * dataset_size)
+    train_size = int(0.87 * dataset_size)
     val_size = dataset_size - train_size
 
     # Randomly split the dataset
@@ -139,10 +155,10 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=2)
 
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.08, patience=4)
+    optimizer = optim.Adam(model.parameters(), lr=0.0005)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
     # Set number of epochs
-    num_epochs = 30
+    num_epochs = 50
 
     # Assuming `train_loader` and `val_loader` are your DataLoaders
     train(model,optimizer,criterion,train_loader,val_loader, scheduler, device, save_file='model.pt', plot_file='plot.png')
