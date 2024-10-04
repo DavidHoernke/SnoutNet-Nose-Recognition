@@ -26,23 +26,22 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
     model.train()
     train_losses = []
     val_losses = []
-    badValLossCount = 0
+    badLossCount = 0
     best_val_loss = float('inf')  # Initialize this outside the loop
 
-    patience = 6  # Number of epochs to wait before stopping early
+    patience = 7  # Number of epochs to wait before stopping early
 
     for epoch in range(num_epochs):
         model.train()  # Set the model to training mode
         running_loss = 0.0
         correct_predictions = 0
-        print(f"Epoch {epoch + 1}/{num_epochs} Starting")
+        print(f"Epoch {epoch + 1}/{num_epochs} Starting, Learning rate:{optimizer.param_groups[0]['lr']}")
 
         # Iterate through batches of data
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)  # Move data to the device
 
             optimizer.zero_grad()  # Clear previous gradients
-
             # Forward pass
             outputs = model(images)
             loss = criterion(outputs, labels)
@@ -60,23 +59,23 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
         train_losses.append(epoch_loss)  # Track training loss
 
         # Validate the model on the validation set
-        val_loss = validate_model(model, val_loader, criterion, device)
-        val_losses.append(val_loss)  # Track validation loss
+        # val_loss = validate_model(model, val_loader, criterion, device)
+        # val_losses.append(val_loss)  # Track validation loss
 
         # Adjust the learning rate based on validation loss
-        scheduler.step(val_loss)
+        scheduler.step(epoch_loss) #lets try it on training
 
-        print(f'{datetime.datetime.now()} Epoch {epoch}, Training Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}')
+        print(f'{datetime.datetime.now()} Epoch {epoch}, Training Loss: {epoch_loss:.4f}')
 
         # Save the best model and stop early if validation hasn't improved in `patience` steps
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            badValLossCount = 0  # Reset the bad validation loss counter
+        if epoch_loss < best_val_loss:
+            best_val_loss = epoch_loss
+            badLossCount = 0  # Reset the bad validation loss counter
             if save_file:
                 torch.save(model.state_dict(), save_file)
-                print(f'Saving best model with validation loss: {val_loss:.4f}')
+                print(f'Saving best model with training loss: {epoch:.4f}')
         else:
-            badValLossCount += 1  # Increment if validation loss didn't improve
+            badLossCount += 1  # Increment if validation loss didn't improve
 
         # Plotting after all epochs
         if plot_file is not None:
@@ -91,7 +90,7 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
             print(f'Saving loss plot to {plot_file}')
             plt.savefig(plot_file)
 
-        if badValLossCount >= patience:
+        if badLossCount >= patience:
             print(f"Early stopping triggered after {patience} epochs without improvement.")
             break
 
@@ -144,19 +143,20 @@ if __name__ == "__main__":
     dataset_size = len(dataset)
 
     # Define split sizes (e.g., 80% train, 20% validation)
-    train_size = int(0.87 * dataset_size)
+    train_size = int(0.999 * dataset_size)
     val_size = dataset_size - train_size
 
     # Randomly split the dataset
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
     # Create DataLoaders for train and validation sets
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=6)
-    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=2)
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=15)
+    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=1)
 
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0005)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
     # Set number of epochs
     num_epochs = 50
 
