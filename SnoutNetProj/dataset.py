@@ -29,8 +29,8 @@ def rescale_image_and_coords(image, coordinates):
 
     # Scale the coordinates
     x, y = coordinates
-    x_scaled = int(x * width_scale)
-    y_scaled = int(y * height_scale)
+    x_scaled = x * width_scale
+    y_scaled = y * height_scale
 
     return image_resized, torch.tensor((x_scaled, y_scaled), dtype=torch.float)
 
@@ -68,7 +68,7 @@ class CustomImageDataset(Dataset):
 
         return img, label
 
-    def show_image_with_circle(self, idx, radius=10, color="red"):
+    def show_image_with_circle(self, idx, radius=10, color="red"): #This is the quick fact check
         # Get the image and coordinates
         img, coordinates = self.__getitem__(idx)
 

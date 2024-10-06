@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     # Load the trained model
     model = SnoutNet()
-    model.load_state_dict(torch.load('model.pt'))  # Load your saved model weights
+    model.load_state_dict(torch.load('4model.pt'))  # Load your saved model weights
     model.to(device)
 
     # Define any transformations (optional)
