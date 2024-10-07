@@ -1,3 +1,4 @@
+import argparse
 import datetime
 
 import torch
@@ -20,7 +21,7 @@ def init_weights(m):
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
 
-def train(model, optimizer, criterion, train_loader, val_loader, scheduler, device, save_file=None, plot_file=None):
+def train(model, optimizer, criterion, train_loader, val_loader, scheduler, device, save_file="model.pt", plot_file='plot.png'):
     print('Training on device: {}', device)
     model.to(device)
     model.train()
@@ -73,7 +74,7 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
             badLossCount = 0  # Reset the bad validation loss counter
             if save_file:
                 torch.save(model.state_dict(), str(epoch)+save_file)
-                print(f'Saving best model with validation loss: {epoch:.4f}')
+                print(f'Saving best model with validation loss: {val_loss:.4f}')
         else:
             badLossCount += 1  # Increment if validation loss didn't improve
 
@@ -117,27 +118,54 @@ def validate_model(model, val_loader, criterion, device):
     return val_loss
 
 if __name__ == "__main__":
-    # Paths to annotations CSV and image folder
-    annotations_dir = r'C:\Users\David Hoernke\PycharmProjects\SnoutNet-Nose-Recognition\SnoutNetProj\oxford-iiit-pet-noses\train_noses.txt'
-    img_dir = r'C:\Users\David Hoernke\PycharmProjects\SnoutNet-Nose-Recognition\SnoutNetProj\oxford-iiit-pet-noses\images-original\images'  # Assuming your images are stored here
+    #THESE ARE THE DEFAULT PARAMETERS OF THE MODEL *******************
+    num_epochs = 50
+    save_file = "model.pt"
+    plot_file = "plot.png"
+    batch_size = 32
+    # END OF DEFAULT PARAMETERS OF THE MODEL ************************
+
+    # Paths to annotations txt and image folder (TA if you are reading this please make sure these work for your proj :) )
+    annotations_dir = './oxford-iiit-pet-noses/train_noses.txt'
+    img_dir = './oxford-iiit-pet-noses/images-original/images'
 
     device = 'cpu'
     if torch.cuda.is_available():
         device = 'cuda'
     print('\t\tusing device ', device)
 
+    #   read arguments from command line
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument('-s', metavar='state', type=str, help='parameter file (.pth)')
+    argParser.add_argument('-e', metavar='epochs', type=int, help='# of epochs [30]')
+    argParser.add_argument('-b', metavar='batch size', type=int, help='batch size [32]')
+    argParser.add_argument('-p', metavar='plot', type=str, help='output loss plot file (.png)')
+
+    args = argParser.parse_args()
+
+    if args.s is not None:
+        save_file = args.s
+    if args.e is not None:
+        num_epochs = args.e
+    if args.b is not None:
+        batch_size = args.b
+    if args.p is not None:
+        plot_file = args.p
+
+    # Model Init.
     model = SnoutNet()
     model.to(device)
     model.apply(init_weights)
     summary(model, (3, 227, 227))
-    # Define any transformations (optional)
 
+    # Transform with no augment
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert the PIL image to a tensor
     ])
 
+    #Transforms including augmentations ( I just comment out the ones not being using )
     transformAugmented = transforms.Compose([
-        # transforms.ColorJitter(brightness=(0.01,0.99), contrast=(0.01,0.99), saturation=(0.01,0.99)),
+        transforms.ColorJitter(brightness=(0.01,3), contrast=(0.01,3), saturation=(0.01,3)),
         transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
         transforms.ToTensor()
     ])
@@ -150,7 +178,7 @@ if __name__ == "__main__":
 
     print("Original dataset size: ", dataset_size)
 
-    train_size = int(0.95 * dataset_size)
+    train_size = int(0.93 * dataset_size)
     val_size = dataset_size - train_size
 
     # Randomly split the dataset
@@ -166,16 +194,14 @@ if __name__ == "__main__":
     print("Augmented Dataset Size:", len(train_dataset))
 
     # Create DataLoaders for train and validation sets
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=15)
-    val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=1)
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True, num_workers=8)
+    val_loader = DataLoader(val_dataset, batch_size, shuffle=False, num_workers=2)
 
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
-    # Set number of epochs
-    num_epochs = 50
 
     # Assuming `train_loader` and `val_loader` are your DataLoaders
-    train(model,optimizer,criterion,train_loader,val_loader, scheduler, device, save_file='model.pt', plot_file='plot.png')
+    train(model,optimizer,criterion,train_loader,val_loader, scheduler, device, save_file, plot_file)
     # Iterate through the DataLoader (in your training or testing loop)

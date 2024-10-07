@@ -1,0 +1,1 @@
+python train.py -s model.pt -e 50 -b 32 -p plot.png
