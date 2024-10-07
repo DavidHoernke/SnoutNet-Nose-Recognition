@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 import numpy as np
 import math
@@ -47,12 +49,14 @@ if __name__ == "__main__":
     annotations_dir = r'C:\Users\David Hoernke\PycharmProjects\SnoutNet-Nose-Recognition\SnoutNetProj\oxford-iiit-pet-noses\test_noses.txt'
     img_dir = r'C:\Users\David Hoernke\PycharmProjects\SnoutNet-Nose-Recognition\SnoutNetProj\oxford-iiit-pet-noses\images-original\images'  # Assuming your images are stored here
 
+    print('running main ...')
+
     device = 'cpu'
     if torch.cuda.is_available():
         device = 'cuda'
     print('Using device:', device)
 
-    # Define any transformations (optional)
+    # Default transforms with no augmentation
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert the PIL image to a tensor
     ])
