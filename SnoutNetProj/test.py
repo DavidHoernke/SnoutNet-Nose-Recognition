@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 import numpy as np
 import math
@@ -133,6 +135,18 @@ if __name__ == "__main__":
     annotations_dir = './oxford-iiit-pet-noses/test_noses.txt'
     img_dir = './oxford-iiit-pet-noses/images-original/images'
 
+    modelName = "StandardModel.pt"
+
+    #   read arguments from command line
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument('-m', metavar='ModelName', type=str, help='Name of model (.pt)')
+
+    args = argParser.parse_args()
+
+    if args.m is not None:
+        modelName = args.m
+
+
     device = 'cpu'
     if torch.cuda.is_available():
         device = 'cuda'
@@ -140,7 +154,7 @@ if __name__ == "__main__":
 
     # Load the trained model
     model = SnoutNet()
-    model.load_state_dict(torch.load('48ColorAndBlurModel.pt'))  # Load your saved model weights
+    model.load_state_dict(torch.load(modelName))  # Load your saved model weights
     model.to(device)
 
     # Define any transformations (optional)

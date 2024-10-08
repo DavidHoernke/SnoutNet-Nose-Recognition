@@ -198,7 +198,7 @@ if __name__ == "__main__":
     train_dataset = ConcatDataset([train_dataset,datasetAugmented, datasetAugmented2])
     dataset.show_image_with_circle(567)
     datasetAugmented.show_image_with_circle(567)
-    datasetAugmented2.show_image_with_circle(567)
+    datasetAugmented2.show_image_with_circle(567) # some visualization of the same picture
 
     # Total size of the dataset
     print("Augmented Dataset Size:", len(train_dataset))
