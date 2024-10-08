@@ -30,7 +30,7 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
     badLossCount = 0
     best_val_loss = float('inf')  # Initialize this outside the loop
 
-    patience = 7  # Number of epochs to wait before stopping early
+    patience = 5  # Number of epochs to wait before stopping early
 
     for epoch in range(num_epochs):
         model.train()  # Set the model to training mode
@@ -80,7 +80,7 @@ def train(model, optimizer, criterion, train_loader, val_loader, scheduler, devi
 
         # Plotting after all epochs
         if plot_file is not None:
-            plt.figure(figsize=(12, 18))
+            plt.figure(figsize=(12, 14))
             plt.plot(train_losses, label='Training Loss')
             plt.plot(val_losses, label='Validation Loss')
             plt.xlabel('Epochs')
@@ -165,10 +165,18 @@ if __name__ == "__main__":
 
     #Transforms including augmentations ( I just comment out the ones not being using )
     transformAugmented = transforms.Compose([
-        transforms.ColorJitter(brightness=(0.01,3), contrast=(0.01,3), saturation=(0.01,3)),
+        # transforms.ColorJitter(brightness=(0.01,3), contrast=(0.01,3), saturation=(0.01,3)),
         transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
         transforms.ToTensor()
     ])
+
+    #Transforms including augmentations ( I just comment out the ones not being using )
+    transformAugmented2 = transforms.Compose([
+        transforms.ColorJitter(brightness=(0.01,3), contrast=(0.01,3), saturation=(0.01,3)),
+        # transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 5)),
+        transforms.ToTensor()
+    ])
+
 
     # Instantiate the CustomImageDataset
     dataset = CustomImageDataset(annotations_dir=annotations_dir, img_dir=img_dir, transform=transform)
@@ -185,10 +193,12 @@ if __name__ == "__main__":
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
     datasetAugmented = CustomImageDataset(annotations_dir=annotations_dir, img_dir=img_dir, transform=transformAugmented)
+    datasetAugmented2= CustomImageDataset(annotations_dir=annotations_dir, img_dir=img_dir, transform=transformAugmented2)
 
-    train_dataset = ConcatDataset([train_dataset,datasetAugmented])
+    train_dataset = ConcatDataset([train_dataset,datasetAugmented, datasetAugmented2])
     dataset.show_image_with_circle(567)
     datasetAugmented.show_image_with_circle(567)
+    datasetAugmented2.show_image_with_circle(567)
 
     # Total size of the dataset
     print("Augmented Dataset Size:", len(train_dataset))
@@ -198,7 +208,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size, shuffle=False, num_workers=2)
 
     criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.00065)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3)
 
