@@ -130,7 +130,7 @@ def visualize_predictions(model, test_dataset, device, num_samples=10, seeRummy=
 
 if __name__ == "__main__":
     # Paths to annotations txt and image folder (TA if you are reading this please make sure these work for your proj :) )
-    annotations_dir = './oxford-iiit-pet-noses/train_noses.txt'
+    annotations_dir = './oxford-iiit-pet-noses/test_noses.txt'
     img_dir = './oxford-iiit-pet-noses/images-original/images'
 
     device = 'cpu'
@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
     # Load the trained model
     model = SnoutNet()
-    model.load_state_dict(torch.load('model.pt'))  # Load your saved model weights
+    model.load_state_dict(torch.load('48ColorAndBlurModel.pt'))  # Load your saved model weights
     model.to(device)
 
     # Define any transformations (optional)
@@ -159,4 +159,4 @@ if __name__ == "__main__":
 
     # Visualize predictions on 10 randomly selected images
     # I also include a picture of my roommates dog, Rummy, for experimentation on a new animal
-    # visualize_predictions(model, test_dataset, device, num_samples=10, seeRummy=True, rummy_image_name="rummy_1.jpg")
+    visualize_predictions(model, test_dataset, device, num_samples=10, seeRummy=True, rummy_image_name="rummy_1.jpg")

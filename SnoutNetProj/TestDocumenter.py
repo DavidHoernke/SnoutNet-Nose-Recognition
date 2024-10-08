@@ -68,7 +68,7 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=4)
 
     # List of models to evaluate, skipping the ones you mentioned
-    model_files = [f'{i}model.pt' for i in range(50)]
+    model_files = [f'{i}ColorAndBlurModel.pt' for i in range(50)]
 
     # CSV file to save the results
     results_file = 'model_evaluation_results.csv'
@@ -87,6 +87,7 @@ if __name__ == "__main__":
         try:
             model.load_state_dict(torch.load(model_file))  # Load the saved model weights
         except:
+            print("Failed to find model")
             continue
         model.to(device)
 
